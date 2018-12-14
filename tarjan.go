@@ -26,6 +26,10 @@
 // Based on an implementation by Gustavo Niemeyer (in mgo/txn):
 // http://bazaar.launchpad.net/+branch/mgo/v2/view/head:/txn/tarjan.go
 //
+// Modified by gcarter to optionally *not* produce output for stand-alone vertices which
+// are not mapped back to themselves.
+// Reference: https://github.com/looplab/tarjan/issues/3
+//
 package tarjan
 
 // Connections creates a slice where each item is a slice of strongly connected vertices.
@@ -34,7 +38,18 @@ package tarjan
 // vertex itself is also a connected group.
 //
 // The example shows the same graph as in the Wikipedia article.
-func Connections(graph map[interface{}][]interface{}) [][]interface{} {
+//
+// In order to *not* produce output for stand-alone vertices, the caller must supply
+// one boolean `false` value.
+func Connections(graph map[interface{}][]interface{}, args ...interface{}) [][]interface{} {
+	withStandAloneVertices := true
+	if len(args) > 0 {
+		var ok bool
+		if withStandAloneVertices, ok = args[0].(bool); !ok {
+			withStandAloneVertices = true
+		}
+	}
+
 	g := &data{
 		graph: graph,
 		nodes: make([]node, 0, len(graph)),
@@ -42,7 +57,7 @@ func Connections(graph map[interface{}][]interface{}) [][]interface{} {
 	}
 	for v := range g.graph {
 		if _, ok := g.index[v]; !ok {
-			g.strongConnect(v)
+			g.strongConnect(v, withStandAloneVertices)
 		}
 	}
 	return g.output
@@ -65,7 +80,7 @@ type node struct {
 
 // strongConnect runs Tarjan's algorithm recursivley and outputs a grouping of
 // strongly connected vertices.
-func (data *data) strongConnect(v interface{}) *node {
+func (data *data) strongConnect(v interface{}, withStandAloneVertices bool) *node {
 	index := len(data.nodes)
 	data.index[v] = index
 	data.stack = append(data.stack, v)
@@ -75,7 +90,7 @@ func (data *data) strongConnect(v interface{}) *node {
 	for _, w := range data.graph[v] {
 		i, seen := data.index[w]
 		if !seen {
-			n := data.strongConnect(w)
+			n := data.strongConnect(w, withStandAloneVertices)
 			if n.lowlink < node.lowlink {
 				node.lowlink = n.lowlink
 			}
@@ -100,7 +115,24 @@ func (data *data) strongConnect(v interface{}) *node {
 			i--
 		}
 		data.stack = data.stack[:i]
-		data.output = append(data.output, vertices)
+
+		if withStandAloneVertices {
+			data.output = append(data.output, vertices)
+		} else {
+			if len(vertices) > 1 {
+				data.output = append(data.output, vertices)
+			} else if len(vertices) == 1 {
+				// There's only one vertex in the "strongly connected group". In
+				// this case (!withStandAloneVertices) we'd better have a path
+				// from this vertex directly to itself.
+				for _, w := range data.graph[vertices[0]] {
+					if w == vertices[0] {
+						data.output = append(data.output, vertices)
+						break
+					}
+				}
+			}
+		}
 	}
 
 	return node

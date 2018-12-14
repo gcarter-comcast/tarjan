@@ -46,6 +46,53 @@ func TestTypeString(t *testing.T) {
 	}
 }
 
+func TestTypeStringWOStandAlone1(t *testing.T) {
+	graph := make(map[interface{}][]interface{})
+	graph["1"] = []interface{}{"2"}
+	graph["2"] = []interface{}{"3"}
+	graph["3"] = []interface{}{"1"}
+	graph["4"] = []interface{}{"2", "3", "5"}
+	graph["5"] = []interface{}{"4", "6"}
+	graph["6"] = []interface{}{"3", "7"}
+	graph["7"] = []interface{}{"6"}
+	graph["8"] = []interface{}{"5", "7", "8"}
+
+	o := Connections(graph, false)
+	output := sortConnections(o)
+	exp := [][]string{
+		{"1", "2", "3"},
+		{"6", "7"},
+		{"4", "5"},
+		{"8"},
+	}
+	if !reflect.DeepEqual(output, exp) {
+		t.Fatalf("FAIL.\nexp=%v\ngot=%v\n", exp, output)
+	}
+}
+
+func TestTypeStringWOStandAlone2(t *testing.T) {
+	graph := make(map[interface{}][]interface{})
+	graph["1"] = []interface{}{"2"}
+	graph["2"] = []interface{}{"3"}
+	graph["3"] = []interface{}{"1"}
+	graph["4"] = []interface{}{"2", "3", "5"}
+	graph["5"] = []interface{}{"4", "6"}
+	graph["6"] = []interface{}{"3", "7"}
+	graph["7"] = []interface{}{"6"}
+	graph["8"] = []interface{}{"5", "7"}
+
+	o := Connections(graph, false)
+	output := sortConnections(o)
+	exp := [][]string{
+		{"1", "2", "3"},
+		{"6", "7"},
+		{"4", "5"},
+	}
+	if !reflect.DeepEqual(output, exp) {
+		t.Fatalf("FAIL.\nexp=%v\ngot=%v\n", exp, output)
+	}
+}
+
 func TestTypeInt(t *testing.T) {
 	graph := make(map[interface{}][]interface{})
 	graph[1] = []interface{}{2}
@@ -114,11 +161,33 @@ func TestSingleVertex(t *testing.T) {
 	}
 }
 
+func TestSingleVertexWOStandAlone(t *testing.T) {
+	graph := make(map[interface{}][]interface{})
+	graph["1"] = []interface{}{}
+
+	o := Connections(graph, false)
+	output := sortConnections(o)
+	if output != nil {
+		t.FailNow()
+	}
+}
+
 func TestSingleVertexLoop(t *testing.T) {
 	graph := make(map[interface{}][]interface{})
 	graph["1"] = []interface{}{"1"}
 
 	o := Connections(graph)
+	output := sortConnections(o)
+	if output[0][0] != "1" {
+		t.FailNow()
+	}
+}
+
+func TestSingleVertexLoopWOStandAlone(t *testing.T) {
+	graph := make(map[interface{}][]interface{})
+	graph["1"] = []interface{}{"1"}
+
+	o := Connections(graph, false)
 	output := sortConnections(o)
 	if output[0][0] != "1" {
 		t.FailNow()

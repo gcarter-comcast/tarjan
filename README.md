@@ -20,8 +20,11 @@ Gustavo Niemeyer: http://labix.org
 
 For API docs and examples see http://godoc.org/github.com/looplab/tarjan
 
+Modified by gcarter to optionally *not* produce output for stand-alone vertices which
+are not mapped back to themselves.
+Reference: https://github.com/looplab/tarjan/issues/3
 
-# Example
+# Example 1 
 
 ```go
 graph := make(map[interface{}][]interface{})
@@ -34,12 +37,53 @@ graph["6"] = []interface{}{"3", "7"}
 graph["7"] = []interface{}{"6"}
 graph["8"] = []interface{}{"5", "7", "8"}
 
-output := Connections(graph)
+output := Connections(graph) // Default withStandAloneVertices == true
 fmt.Println(output)
 
 // Output:
 // [[3 2 1] [7 6] [5 4] [8]]
 ```
+
+# Example 2
+
+```go
+graph := make(map[interface{}][]interface{})
+graph["1"] = []interface{}{"2"}
+graph["2"] = []interface{}{"3"}
+graph["3"] = []interface{}{"1"}
+graph["4"] = []interface{}{"2", "3", "5"}
+graph["5"] = []interface{}{"4", "6"}
+graph["6"] = []interface{}{"3", "7"}
+graph["7"] = []interface{}{"6"}
+graph["8"] = []interface{}{"5", "7", "8"}
+
+output := Connections(graph, false /*withStandAloneVertices*/)
+fmt.Println(output)
+
+// Output:
+// [[3 2 1] [7 6] [5 4] [8]]
+```
+
+# Example 3
+
+```go
+graph := make(map[interface{}][]interface{})
+graph["1"] = []interface{}{"2"}
+graph["2"] = []interface{}{"3"}
+graph["3"] = []interface{}{"1"}
+graph["4"] = []interface{}{"2", "3", "5"}
+graph["5"] = []interface{}{"4", "6"}
+graph["6"] = []interface{}{"3", "7"}
+graph["7"] = []interface{}{"6"}
+graph["8"] = []interface{}{"5", "7"}
+
+output := Connections(graph, false /*withStandAloneVertices*/)
+fmt.Println(output)
+
+// Output:
+// [[3 2 1] [7 6] [5 4]]
+```
+
 
 
 # License
